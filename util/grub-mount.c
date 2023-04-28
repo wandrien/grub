@@ -136,6 +136,7 @@ struct fuse_getattr_ctx
   char *filename;
   struct grub_dirhook_info file_info;
   int file_exists;
+  long index; /* for debug log: counting dir entries */
 };
 
 /* A hook for iterating directories. */
@@ -144,6 +145,13 @@ fuse_getattr_find_file (const char *cur_filename,
 			const struct grub_dirhook_info *info, void *data)
 {
   struct fuse_getattr_ctx *ctx = data;
+
+  grub_dprintf ("grub-mount",
+    "%s: %s (%ld) dir=%d mtime=%lld\n",
+    __func__, cur_filename, (++ctx->index),
+    info->dir,
+    info->mtimeset ? ((long long) info->mtime) : ((long long) 0)
+  );
 
   if ((info->case_insensitive ? grub_strcasecmp (cur_filename, ctx->filename)
        : grub_strcmp (cur_filename, ctx->filename)) == 0)
@@ -167,6 +175,8 @@ fuse_getattr (const char *path, struct stat *st,
   struct fuse_getattr_ctx ctx;
   char *pathname, *path2;
 
+  grub_dprintf ("grub-mount", "%s: %s\n", __func__, path);
+
   if (path[0] == '/' && path[1] == 0)
     {
       st->st_dev = 0;
@@ -183,6 +193,7 @@ fuse_getattr (const char *path, struct stat *st,
     }
 
   ctx.file_exists = 0;
+  ctx.index = 0;
 
   pathname = xstrdup (path);
 
@@ -248,6 +259,7 @@ fuse_getattr (const char *path, struct stat *st,
 static int
 fuse_opendir (const char *path, struct fuse_file_info *fi)
 {
+  grub_dprintf ("grub-mount", "%s: %s\n", __func__, path);
   return 0;
 }
 
@@ -258,6 +270,8 @@ static int first_fd = 1;
 static int
 fuse_open (const char *path, struct fuse_file_info *fi)
 {
+  grub_dprintf ("grub-mount", "%s: %s\n", __func__, path);
+
   if ((fi->flags & O_ACCMODE) != O_RDONLY)
     return -EROFS;
 
@@ -279,6 +293,9 @@ fuse_read (const char *path, char *buf, size_t sz, off_t off,
   grub_file_t file = files[fi->fh];
   grub_ssize_t size;
 
+  grub_dprintf ("grub-mount", "%s: %s: off=%llu, sz=%llu\n", __func__, path,
+    (unsigned long long) off, (unsigned long long) sz);
+
   if (off > file->size)
     return -EINVAL;
 
@@ -297,6 +314,7 @@ fuse_read (const char *path, char *buf, size_t sz, off_t off,
 static int
 fuse_release (const char *path, struct fuse_file_info *fi)
 {
+  grub_dprintf ("grub-mount", "%s: %s\n", __func__, path);
   grub_file_close (files[fi->fh]);
   files[fi->fh] = NULL;
   grub_errno = GRUB_ERR_NONE;
@@ -309,6 +327,7 @@ struct fuse_readdir_ctx
   const char *path;
   void *buf;
   fuse_fill_dir_t fill;
+  long index; /* for debug log: counting dir entries */
 };
 
 /* Helper for fuse_readdir.  */
@@ -318,6 +337,13 @@ fuse_readdir_call_fill (const char *filename,
 {
   struct fuse_readdir_ctx *ctx = data;
   struct stat st;
+
+  grub_dprintf ("grub-mount",
+    "%s: %s (%ld) dir=%d mtime=%lld\n",
+    __func__, filename, (++ctx->index),
+    info->dir,
+    info->mtimeset ? ((long long) info->mtime) : ((long long) 0)
+  );
 
   grub_memset (&st, 0, sizeof (st));
   st.st_mode = info->dir ? (0555 | S_IFDIR) : (0444 | S_IFREG);
@@ -370,9 +396,12 @@ fuse_readdir (const char *path, void *buf,
   struct fuse_readdir_ctx ctx = {
     .path = path,
     .buf = buf,
-    .fill = fill
+    .fill = fill,
+    .index = 0
   };
   char *pathname;
+
+  grub_dprintf ("grub-mount", "%s: %s\n", __func__, path);
 
   pathname = xstrdup (path);
 
