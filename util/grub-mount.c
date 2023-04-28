@@ -478,6 +478,7 @@ fuse_init (void)
 }
 
 static struct argp_option options[] = {
+  {"foreground",'f', NULL, 0, N_("Run in foreground."), 2},
   {"root",      'r', N_("DEVICE_NAME"), 0, N_("Set root device."),                 2},
   {"debug",     'd', N_("STRING"),           0, N_("Set debug environment variable."),  2},
   {"crypto",   'C', NULL, 0, N_("Mount crypto devices."), 2},
@@ -553,6 +554,10 @@ argp_parser (int key, char *arg, struct argp_state *state)
 
     case 'v':
       verbosity++;
+      return 0;
+
+    case 'f':
+      str_vector_append (&fuse_args, &fuse_argc, xstrdup ("-f"));
       return 0;
 
     case ARGP_KEY_ARG:
