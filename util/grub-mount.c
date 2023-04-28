@@ -603,11 +603,13 @@ main (int argc, char *argv[])
   str_vector_append(&fuse_args, &fuse_argc, images[num_disks - 1]);
   num_disks--;
 
-  /* Initialize all modules. */
-  grub_init_all ();
-
   if (debug_str)
     grub_env_set ("debug", debug_str);
+  else if (verbosity > 1)
+    grub_env_set ("debug", "all");
+
+  /* Initialize all modules. */
+  grub_init_all ();
 
   default_root = (num_disks == 1) ? "loop0" : "md0";
   alloc_root = 0;
