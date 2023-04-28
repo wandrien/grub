@@ -58,6 +58,16 @@ static int fuse_argc = 0;
 static int num_disks = 0;
 static int mount_crypt = 0;
 
+/* Appends a value to string vector and makes sure vector is NULL-terminated. */
+static void
+str_vector_append (char ***vector, int *vector_size, char *new_item)
+{
+  *vector  = xrealloc (*vector, (*vector_size + 2) * sizeof ((*vector)[0]));
+  (*vector)[*vector_size] = new_item;
+  (*vector)[*vector_size + 1] = NULL;
+  (*vector_size)++;
+}
+
 static grub_err_t
 execute_command (const char *name, int n, char **args)
 {
@@ -554,15 +564,11 @@ argp_parser (int key, char *arg, struct argp_state *state)
       if (!arg)
 	return 0;
 
-      fuse_args = xrealloc (fuse_args, (fuse_argc + 1) * sizeof (fuse_args[0]));
-      fuse_args[fuse_argc] = xstrdup (arg);
-      fuse_argc++;
+      str_vector_append (&fuse_args, &fuse_argc, xstrdup (arg));
       return 0;
     }
 
-  images = xrealloc (images, (num_disks + 1) * sizeof (images[0]));
-  images[num_disks] = grub_canonicalize_file_name (arg);
-  num_disks++;
+  str_vector_append(&images, &num_disks, grub_canonicalize_file_name (arg));
 
   return 0;
 }
@@ -581,22 +587,16 @@ main (int argc, char *argv[])
 
   grub_util_host_init (&argc, &argv);
 
-  fuse_args = xrealloc (fuse_args, (fuse_argc + 2) * sizeof (fuse_args[0]));
-  fuse_args[fuse_argc] = xstrdup (argv[0]);
-  fuse_argc++;
+  str_vector_append (&fuse_args, &fuse_argc, xstrdup (argv[0]));
   /* Run single-threaded.  */
-  fuse_args[fuse_argc] = xstrdup ("-s");
-  fuse_argc++;
+  str_vector_append (&fuse_args, &fuse_argc, xstrdup ("-s"));
 
   argp_parse (&argp, argc, argv, 0, 0, 0);
 
   if (num_disks < 2)
     grub_util_error ("%s", _("need an image and mountpoint"));
-  fuse_args = xrealloc (fuse_args, (fuse_argc + 2) * sizeof (fuse_args[0]));
-  fuse_args[fuse_argc] = images[num_disks - 1];
-  fuse_argc++;
+  str_vector_append(&fuse_args, &fuse_argc, images[num_disks - 1]);
   num_disks--;
-  fuse_args[fuse_argc] = NULL;
 
   /* Initialize all modules. */
   grub_init_all ();
