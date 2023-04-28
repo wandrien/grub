@@ -35,11 +35,14 @@ struct grub_file;
 
 struct grub_dirhook_info
 {
-  unsigned dir:1;
-  unsigned mtimeset:1;
+  unsigned dir:1; /* direntry refers to a directory */
+  unsigned reg:1; /* direntry refers to a regular file */
   unsigned case_insensitive:1;
+  unsigned mtimeset:1;
+  unsigned sizeset:1;
   unsigned inodeset:1;
   grub_int64_t mtime;
+  grub_off_t size;
   grub_uint64_t inode;
 };
 
