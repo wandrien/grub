@@ -205,6 +205,8 @@ read_stat (struct read_stat_req *req, struct stat *st)
       if (!req->do_file_open || !req->fullpath)
 	return ENOENT;
 
+      grub_dprintf ("grub-mount", "%s: calling grub_file_open for %s\n",
+        __func__, req->fullpath);
       file = grub_file_open (req->fullpath, GRUB_FILE_TYPE_GET_SIZE);
 
       if (! file && grub_errno == GRUB_ERR_BAD_FILE_TYPE)
@@ -450,7 +452,7 @@ fuse_readdir_call_fill (const char *filename,
     path = xasprintf ("%s%s", ctx->path, filename);
   req.fullpath = path;
   req.file_info = info;
-  req.do_file_open = 1;
+  req.do_file_open = 0;
   if (read_stat (&req, &st) == 0)
     p_st = &st;
   free(path);
